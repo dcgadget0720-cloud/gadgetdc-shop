@@ -21,7 +21,7 @@ body{
 }
 .orb{font-family:'Orbitron','Rajdhani',sans-serif}
 .neon-text{background:linear-gradient(90deg,var(--cy),var(--pu),var(--pk));-webkit-background-clip:text;background-clip:text;color:transparent}
-.panel{background:rgba(14,14,30,.78);border:1px solid rgba(168,85,247,.35);border-radius:14px;
+.panel{background:rgba(14,14,30,.92);border:1px solid rgba(168,85,247,.35);border-radius:14px;
   box-shadow:0 0 20px rgba(168,85,247,.12),inset 0 0 24px rgba(34,211,238,.03);backdrop-filter:blur(8px)}
 .card{background:rgba(14,14,30,.85);border:1px solid rgba(34,211,238,.25);border-radius:14px;overflow:hidden;transition:.25s}
 .card:hover{transform:translateY(-4px);border-color:var(--cy);box-shadow:0 0 22px rgba(34,211,238,.35)}
@@ -44,9 +44,22 @@ body{
 .avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-weight:900;font-size:20px;
   background:linear-gradient(135deg,var(--cy),var(--pu));color:#07070f;box-shadow:0 0 14px rgba(34,211,238,.55)}
 .sect{font-family:'Orbitron',sans-serif;font-weight:700;letter-spacing:1px;margin-bottom:18px;padding-bottom:8px;border-bottom:1px solid rgba(168,85,247,.35)}
-.cred{background:rgba(52,211,153,.08);border:1px dashed rgba(52,211,153,.5);border-radius:8px;padding:10px;font-family:ui-monospace,monospace;word-break:break-all}
+.cred{background:rgba(52,211,153,.08);border:1px dashed rgba(52,211,153,.5);border-radius:8px;padding:10px;font-family:ui-monospace,monospace;word-break:break-all;font-size:14px}
 th,td{padding:7px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.07)}
 th{color:#9ca3af;font-weight:600}
+
+/* ----- VENTANAS FLOTANTES ----- */
+@keyframes pop{from{opacity:0;transform:scale(.92) translateY(12px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal-in{animation:pop .22s ease-out}
+.spinner{width:44px;height:44px;border:4px solid rgba(34,211,238,.25);border-top-color:var(--cy);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+.mclose{position:absolute;top:10px;right:14px;background:transparent;color:#9ca3af;font-size:20px;border:0;cursor:pointer;z-index:2}
+.mclose:hover{color:#fff}
+.stepper button{width:42px;height:42px;border-radius:10px;font-size:24px;line-height:1;background:#1f2937;color:#fff;border:1px solid rgba(34,211,238,.35);cursor:pointer}
+.stepper button:disabled{opacity:.3;cursor:not-allowed}
+.ok-circle{width:70px;height:70px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;color:#02170f;
+  background:linear-gradient(135deg,var(--gr),var(--cy));box-shadow:0 0 30px rgba(52,211,153,.6);animation:pop .4s ease-out}
+.err-circle{background:linear-gradient(135deg,#f87171,#dc2626);box-shadow:0 0 30px rgba(248,113,113,.5);color:#fff}
 </style>
   <link rel="icon" type="image/png" href="img/logo.png">
 </head>
@@ -83,6 +96,7 @@ th{color:#9ca3af;font-weight:600}
     <div class="flex items-center gap-3 flex-wrap justify-center">
       <div class="chip" style="border-color:rgba(52,211,153,.5);color:var(--gr)"><small>SALDO</small><b id="user-balance">$0.00</b></div>
       <div class="chip" style="border-color:rgba(251,191,36,.5);color:var(--go)"><small>🎁 COMISIÓN</small><b id="user-bonus">$0.00</b></div>
+      <button id="btn-mine" class="btn btn-gold">🎒 Mis cuentas (<span id="mine-count">0</span>)</button>
       <button id="btn-logout" class="btn btn-red">Salir</button>
     </div>
   </nav>
@@ -130,15 +144,15 @@ th{color:#9ca3af;font-weight:600}
   <div id="client-panel">
     <h3 class="sect text-2xl neon-text">🕹️ SERVICIOS</h3>
     <div id="store-catalog" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"></div>
-    <div id="just-bought"></div>
-    <h3 class="sect text-2xl" style="color:var(--go)">🎒 MIS CUENTAS</h3>
-    <div id="my-accounts" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <p class="text-gray-400 col-span-2">Aún no has comprado ninguna cuenta.</p>
-    </div>
   </div>
 </div>
 
-<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 panel px-5 py-3 z-50 max-w-[90%] text-center"></div>
+<!-- VENTANA FLOTANTE -->
+<div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(3,3,10,.78);backdrop-filter:blur(6px)">
+  <div id="modal-box" class="panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative"></div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 panel px-5 py-3 max-w-[90%] text-center" style="z-index:60"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -146,7 +160,8 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, on
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, orderBy, limit, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const ADMIN_EMAIL = "dcgadget0720@gmail.com";
-const COMM = 0.05;   // 5% de comisión
+const COMM = 0.05;      // 5% de comisión
+const MAX_QTY = 10;     // máximo de cuentas por compra
 
 // Servicios fijos. Imagen: img/<img>.png  (si no existe, se muestra un diseño de color)
 const SERVICES = [
@@ -176,13 +191,14 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const money = n => "$" + Number(n || 0).toFixed(2);
 const r2 = n => Math.round(n * 100) / 100;
 const DAY = 86400000;
-const svc = id => SERVICES.find(s => s.id === id) || { id, name: id, sub: "", c1: "#374151", c2: "#111827" };
+const svc = id => SERVICES.find(s => s.id === id) || { id, name: id, sub: "", img: "x", c1: "#374151", c2: "#111827" };
 const fdate = ms => ms ? new Date(ms).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" }) : "-";
 
 function tile(s) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${s.c1}"/><stop offset="1" stop-color="${s.c2}"/></linearGradient></defs><rect width="400" height="200" fill="url(#g)"/><text x="200" y="105" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="white" text-anchor="middle">${s.name}</text><text x="200" y="145" font-family="Arial,sans-serif" font-size="22" fill="rgba(255,255,255,.8)" text-anchor="middle">${s.sub}</text></svg>`;
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
+const imgTag = (sv, cls) => `<img src="img/${sv.img}.png" alt="${esc(sv.name)}" class="${cls}" onerror="this.onerror=null;this.src='${tile(sv)}'">`;
 
 let user = null, profile = null, stock = [], isAdmin = false, pendingName = "";
 
@@ -198,7 +214,56 @@ function authError(e) {
   showErr(m[e.code] || e.message);
 }
 
-// ---------- LOGIN / REGISTRO ----------
+// ================= VENTANAS FLOTANTES =================
+const CLOSEBTN = `<button class="mclose" data-close aria-label="Cerrar">✕</button>`;
+let modalResolve = null, modalTok = 0, busy = false, copyAllText = "";
+
+function setModal(html) { $("modal-box").innerHTML = CLOSEBTN + html; }
+function openModal(html, wide) {
+  modalTok++;
+  $("modal-box").className = "panel w-full " + (wide ? "max-w-3xl" : "max-w-md") + " max-h-[90vh] overflow-y-auto p-6 relative modal-in";
+  setModal(html);
+  $("modal").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+function closeModal() {
+  if (busy) return;
+  modalTok++;
+  $("modal").classList.add("hidden");
+  document.body.style.overflow = "";
+  if (modalResolve) { const r = modalResolve; modalResolve = null; r(false); }
+}
+$("modal").addEventListener("click", e => { if (e.target === $("modal") || e.target.closest("[data-close]")) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("modal").classList.contains("hidden")) closeModal(); });
+
+function confirmView({ title, body, okText, okClass }) {
+  return new Promise(res => {
+    openModal(`<h3 class="orb text-xl neon-text mb-3 text-center">${title}</h3>
+      <div class="text-gray-300 mb-5">${body}</div>
+      <div class="flex gap-3"><button class="btn btn-gray flex-1" data-close>Cancelar</button>
+      <button id="c-ok" class="btn ${okClass || "btn-cyan"} flex-1">${okText}</button></div>`);
+    modalResolve = res;
+    $("c-ok").onclick = () => { modalResolve = null; res(true); };
+  });
+}
+const spinnerView = (txt) => `<div class="text-center py-8"><div class="spinner mb-4"></div><p class="orb" id="prog">${txt}</p><p class="text-gray-400 text-sm mt-2">No cierres esta ventana</p></div>`;
+
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); }
+  catch { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch {} a.remove(); }
+}
+const credBlock = sec => `<div class="cred">
+  <div class="flex items-center justify-between gap-2"><span>Correo: ${esc(sec.email)}</span><button class="btn btn-gray" style="padding:5px 8px" data-copy="${esc(sec.email)}">📋</button></div>
+  <div class="flex items-center justify-between gap-2 mt-1"><span>Clave: ${esc(sec.pass)}</span><button class="btn btn-gray" style="padding:5px 8px" data-copy="${esc(sec.pass)}">📋</button></div></div>`;
+
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-copy]"); if (c) { copyText(c.dataset.copy); toast("Copiado ✅"); return; }
+  if (e.target.closest("[data-copyall]")) { copyText(copyAllText); toast("Todo copiado ✅"); return; }
+  const r = e.target.closest("[data-renew]"); if (r) { renewFlow(r.dataset.renew, r.dataset.mode); return; }
+  if (e.target.closest("[data-gomine]")) { openMine(); }
+});
+
+// ================= LOGIN / REGISTRO =================
 let regMode = false;
 function setRegMode(on) {
   regMode = on;
@@ -221,7 +286,8 @@ $("btn-register").addEventListener("click", async () => {
   pendingName = name;
   try { await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); } catch (e) { authError(e); }
 });
-$("btn-logout").addEventListener("click", () => signOut(auth));
+$("btn-logout").addEventListener("click", () => { busy = false; closeModal(); signOut(auth); });
+$("btn-mine").addEventListener("click", openMine);
 
 onAuthStateChanged(auth, async u => {
   user = u;
@@ -249,12 +315,12 @@ async function refresh() {
   $("hud-avatar").textContent = (Array.from(name)[0] || "?").toUpperCase();
   $("user-balance").textContent = money(profile.balance);
   $("user-bonus").textContent = money(profile.bonus || 0);
-  renderCatalog(); renderMine();
+  $("mine-count").textContent = stock.filter(s => s.soldTo === user.uid).length;
+  renderCatalog();
 }
 
-// ---------- CATALOGO ----------
+// ================= CATALOGO =================
 function renderCatalog() {
-  const bonus = profile.bonus || 0;
   $("store-catalog").innerHTML = SERVICES.map(sv => {
     const items = stock.filter(i => i.service === sv.id);
     const free = items.filter(i => !i.sold);
@@ -264,20 +330,17 @@ function renderCatalog() {
     const badge = n === 0 ? `<span class="badge" style="background:#dc2626;color:#fff">AGOTADO</span>`
                 : n <= 3 ? `<span class="badge" style="background:var(--go);color:#1a1000">POCAS UNIDADES</span>` : "";
     return `<div class="card">
-      <div class="relative">
-        <img src="img/${sv.img}.png" alt="${esc(sv.name)}" class="w-full h-36 object-cover" onerror="this.onerror=null;this.src='${tile(sv)}'">${badge}
-      </div>
+      <div class="relative">${imgTag(sv, "w-full h-36 object-cover")}${badge}</div>
       <div class="p-5">
         <h4 class="orb text-lg font-bold">${esc(sv.name)}</h4>
         <p class="text-sm" style="color:var(--cy)">${esc(sv.sub)}</p>
         <p class="orb text-3xl font-black my-1" style="color:var(--gr)">${ref ? money(ref.price) : "—"}</p>
         <p class="text-gray-400 text-sm mb-3">⏳ ${days} días · ${n ? n + " disponibles" : "Sin stock"}</p>
-        <button data-buy="${sv.id}" data-mode="saldo" class="btn btn-cyan w-full" ${n ? "" : "disabled"}>Comprar con saldo</button>
-        ${ref && n && bonus >= ref.price ? `<button data-buy="${sv.id}" data-mode="comision" class="btn btn-gold w-full mt-2">🎁 Pagar con comisión</button>` : ""}
+        <button data-buy="${sv.id}" class="btn btn-cyan w-full" ${n ? "" : "disabled"}>Comprar</button>
         ${isAdmin ? `<button data-restock="${sv.id}" class="btn btn-purple w-full mt-2">➕ Cargar stock</button>` : ""}
       </div></div>`;
   }).join("");
-  document.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", () => buy(b.dataset.buy, b.dataset.mode)));
+  document.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", async () => { await refresh(); openBuy(b.dataset.buy); }));
   document.querySelectorAll("[data-restock]").forEach(b => b.addEventListener("click", () => {
     const id = b.dataset.restock, last = stock.filter(i => i.service === id).pop();
     $("add-service").value = id;
@@ -287,46 +350,121 @@ function renderCatalog() {
   }));
 }
 
-// ---------- COMPRAR ----------
-async function buy(serviceId, mode) {
-  await refresh();
-  const item = stock.find(s => s.service === serviceId && !s.sold);
-  const name = svc(serviceId).name;
-  if (!item) return toast("Se agotó");
-  const bal = profile.balance || 0, bon = profile.bonus || 0, fromBonus = mode === "comision";
-  if ((fromBonus ? bon : bal) < item.price) return toast(fromBonus ? "Tu comisión no alcanza." : "Saldo insuficiente. Pide una recarga.");
-  const days = item.days ?? 30, com = r2(item.price * COMM);
-  const aviso = fromBonus ? "Pagarás con tu COMISIÓN." : `Ganarás ${money(com)} de comisión.`;
-  if (!confirm(`¿Comprar ${name} por ${money(item.price)}?\nLa cuenta dura ${days} días desde hoy.\n${aviso}`)) return;
-  try {
-    const exp = Date.now() + days * DAY, batch = writeBatch(db);
-    batch.update(doc(db, "stock", item.id), { sold: true, soldTo: user.uid, expiresAt: exp });
-    batch.update(doc(db, "users", user.uid), fromBonus
-      ? { bonus: r2(bon - item.price), lastOp: item.id }
-      : { balance: r2(bal - item.price), bonus: r2(bon + com), lastOp: item.id });
-    batch.set(doc(collection(db, "sales")), { type: "compra", uid: user.uid, buyer: user.email, service: serviceId, stockId: item.id,
-      price: item.price, expiresAt: exp, createdAt: Date.now(), pay: fromBonus ? "comision" : "saldo", commission: fromBonus ? 0 : com });
-    await batch.commit();
-    const sec = (await getDoc(doc(db, "secrets", item.id))).data();
-    $("just-bought").innerHTML = `<div class="panel p-5 mb-10" style="border-color:rgba(52,211,153,.6)">
-      <b style="color:var(--gr)" class="orb">✅ ¡COMPRA EXITOSA! ${esc(name)}</b>
-      <div class="cred mt-3">Correo: ${esc(sec.email)}<br>Clave: ${esc(sec.pass)}</div>
-      <p class="mt-2 text-sm" style="color:var(--go)">⏳ Vence el ${esc(fdate(exp))} (${days} días). Puedes renovarla antes de esa fecha.</p></div>`;
-    await refresh(); if (isAdmin) loadLog();
-  } catch (e) {
-    console.error(e);
-    toast("No se pudo completar (quizás otra persona la compró primero). Intenta de nuevo.");
-    await refresh();
-  }
+// ================= COMPRAR (ventana + cantidad) =================
+function openBuy(serviceId) {
+  const sv = svc(serviceId);
+  const free = stock.filter(i => i.service === serviceId && !i.sold);
+  if (!free.length) return toast("Se agotó");
+  const max = Math.min(free.length, MAX_QTY);
+  const bal = profile.balance || 0, bon = profile.bonus || 0;
+  let qty = 1;
+  const draw = first => {
+    const items = free.slice(0, qty);
+    const total = r2(items.reduce((s, i) => s + i.price, 0));
+    const com = r2(items.reduce((s, i) => s + r2(i.price * COMM), 0));
+    const days = items[0].days ?? 30;
+    const okBal = bal >= total, okBon = bon >= total;
+    const html = `
+      ${imgTag(sv, "w-full h-28 object-cover rounded-lg mb-4")}
+      <h3 class="orb text-xl neon-text text-center">${esc(sv.name)}</h3>
+      <p class="text-center text-gray-400 text-sm">${esc(sv.sub)} · ⏳ ${days} días de duración</p>
+      <div class="flex items-center justify-between my-5">
+        <span class="text-gray-200">Cantidad <span class="text-gray-500 text-sm">(${free.length} disp.)</span></span>
+        <div class="stepper flex items-center gap-3">
+          <button id="q-minus" ${qty <= 1 ? "disabled" : ""}>−</button>
+          <b class="orb text-2xl w-8 text-center">${qty}</b>
+          <button id="q-plus" ${qty >= max ? "disabled" : ""}>+</button>
+        </div>
+      </div>
+      <div class="rounded-lg p-3 text-sm space-y-1" style="background:rgba(255,255,255,.05)">
+        <div class="flex justify-between"><span>Precio unitario</span><b>${money(items[0].price)}</b></div>
+        <div class="flex justify-between"><span>Total</span><b class="orb" style="color:var(--gr)">${money(total)}</b></div>
+        <div class="flex justify-between"><span>🎁 Comisión que ganarás (pagando con saldo)</span><b style="color:var(--go)">+${money(com)}</b></div>
+        <div class="flex justify-between text-gray-400"><span>Tu saldo</span><span>${money(bal)}</span></div>
+        <div class="flex justify-between text-gray-400"><span>Tu comisión</span><span>${money(bon)}</span></div>
+      </div>
+      <button id="pay-bal" class="btn btn-cyan w-full mt-4" ${okBal ? "" : "disabled"}>Pagar ${money(total)} con saldo</button>
+      ${okBon ? `<button id="pay-bon" class="btn btn-gold w-full mt-2">🎁 Pagar con comisión</button>` : ""}
+      ${!okBal && !okBon ? `<p class="text-red-400 text-sm text-center mt-3">Saldo insuficiente. Te faltan ${money(total - bal)}. Pide una recarga.</p>` : ""}
+      <button class="btn btn-gray w-full mt-2" data-close>Cancelar</button>`;
+    first ? openModal(html) : setModal(html);
+    $("q-minus").onclick = () => { if (qty > 1) { qty--; draw(); } };
+    $("q-plus").onclick = () => { if (qty < max) { qty++; draw(); } };
+    $("pay-bal").onclick = () => runBuy(serviceId, qty, false);
+    if ($("pay-bon")) $("pay-bon").onclick = () => runBuy(serviceId, qty, true);
+  };
+  draw(true);
 }
 
-// ---------- MIS CUENTAS + RENOVAR ----------
-async function renderMine() {
+async function runBuy(serviceId, qty, fromBonus) {
+  busy = true;
+  setModal(spinnerView("Procesando compra…"));
+  const sv = svc(serviceId);
+  let bal = profile.balance || 0, bon = profile.bonus || 0;
+  const cands = stock.filter(s => s.service === serviceId && !s.sold);
+  const bought = []; let fails = 0;
+  for (const item of cands) {
+    if (bought.length >= qty || fails >= 3) break;
+    if ((fromBonus ? bon : bal) < item.price) break;
+    const com = r2(item.price * COMM), days = item.days ?? 30, exp = Date.now() + days * DAY;
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, "stock", item.id), { sold: true, soldTo: user.uid, expiresAt: exp });
+      batch.update(doc(db, "users", user.uid), fromBonus
+        ? { bonus: r2(bon - item.price), lastOp: item.id }
+        : { balance: r2(bal - item.price), bonus: r2(bon + com), lastOp: item.id });
+      batch.set(doc(collection(db, "sales")), { type: "compra", uid: user.uid, buyer: user.email, service: serviceId, stockId: item.id,
+        price: item.price, expiresAt: exp, createdAt: Date.now(), pay: fromBonus ? "comision" : "saldo", commission: fromBonus ? 0 : com });
+      await batch.commit();
+      if (fromBonus) bon = r2(bon - item.price); else { bal = r2(bal - item.price); bon = r2(bon + com); }
+      let sec = { email: "?", pass: "?" };
+      try { sec = (await getDoc(doc(db, "secrets", item.id))).data(); } catch (e) { console.error(e); }
+      bought.push({ item, sec, exp, com: fromBonus ? 0 : com });
+      const p = $("prog"); if (p) p.textContent = `Comprando… ${bought.length}/${qty}`;
+    } catch (e) { console.error(e); fails++; }
+  }
+  busy = false;
+  await refresh(); if (isAdmin) loadLog();
+
+  if (!bought.length) {
+    setModal(`<div class="text-center"><div class="ok-circle err-circle">!</div>
+      <h3 class="orb text-xl" style="color:#f87171">NO SE PUDO COMPLETAR</h3>
+      <p class="text-gray-300 mt-2">Es posible que otra persona haya tomado esa cuenta justo antes. <b>No se te cobró nada.</b> Intenta de nuevo.</p>
+      <button class="btn btn-gray w-full mt-5" data-close>Cerrar</button></div>`);
+    return;
+  }
+  const comTotal = r2(bought.reduce((s, b) => s + b.com, 0));
+  copyAllText = bought.map(b => `${sv.name}\nCorreo: ${b.sec.email}\nClave: ${b.sec.pass}`).join("\n\n");
+  setModal(`<div class="text-center">
+      <div class="ok-circle">✓</div>
+      <h3 class="orb text-2xl font-black" style="color:var(--gr)">¡COMPRA EXITOSA!</h3>
+      <p class="text-gray-300 mt-1">${bought.length} × ${esc(sv.name)}</p>
+      ${bought.length < qty ? `<p class="text-sm mt-1" style="color:var(--go)">Solo se pudieron comprar ${bought.length} de ${qty} (cambió el stock).</p>` : ""}
+      ${comTotal > 0 ? `<p class="text-sm mt-1" style="color:var(--go)">🎁 Ganaste ${money(comTotal)} de comisión</p>` : ""}
+    </div>
+    <div class="mt-4 space-y-3 overflow-y-auto pr-1" style="max-height:38vh">${bought.map(b => credBlock(b.sec)).join("")}</div>
+    <p class="text-sm mt-3" style="color:var(--go)">⏳ Vencen el ${esc(fdate(bought[0].exp))}. Quedan guardadas en 🎒 Mis cuentas.</p>
+    <div class="flex gap-3 mt-4 flex-wrap">
+      <button class="btn btn-cyan flex-1" data-copyall>📋 Copiar todo</button>
+      <button class="btn btn-gold flex-1" data-gomine>🎒 Mis cuentas</button>
+    </div>
+    <button class="btn btn-gray w-full mt-3" data-close>Cerrar</button>`);
+}
+
+// ================= MIS CUENTAS (ventana) =================
+async function openMine() {
+  const header = `<h3 class="orb text-xl mb-4" style="color:var(--go)">🎒 MIS CUENTAS</h3>`;
+  openModal(header + `<div class="py-8"><div class="spinner"></div></div>`, true);
+  const tok = modalTok;
+  await refresh();
   const mine = stock.filter(s => s.soldTo === user.uid).sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
-  if (!mine.length) { $("my-accounts").innerHTML = '<p class="text-gray-400 col-span-2">Aún no has comprado ninguna cuenta.</p>'; return; }
+  if (tok !== modalTok) return;
+  if (!mine.length) { setModal(header + `<p class="text-gray-400 py-6 text-center">Aún no has comprado ninguna cuenta.</p>`); return; }
+  const secs = await Promise.all(mine.map(async s => { try { return (await getDoc(doc(db, "secrets", s.id))).data(); } catch { return { email: "?", pass: "?" }; } }));
+  if (tok !== modalTok) return;
   const bonus = profile.bonus || 0;
-  const cards = await Promise.all(mine.map(async s => {
-    const sec = (await getDoc(doc(db, "secrets", s.id))).data();
+  copyAllText = mine.map((s, i) => `${svc(s.service).name}\nCorreo: ${secs[i].email}\nClave: ${secs[i].pass}`).join("\n\n");
+  const cards = mine.map((s, i) => {
     const days = s.days ?? 30;
     let estado = '<span class="text-gray-400">Sin fecha de vencimiento</span>', canRenew = false;
     if (s.expiresAt) {
@@ -337,24 +475,39 @@ async function renderMine() {
       canRenew = true;
     }
     return `<div class="card p-4"><b class="orb">${esc(svc(s.service).name)}</b>
-      <div class="cred mt-2">Correo: ${esc(sec.email)}<br>Clave: ${esc(sec.pass)}</div>
+      <div class="mt-2">${credBlock(secs[i])}</div>
       <p class="mt-2 text-sm">${estado}</p>
       ${canRenew ? `<button data-renew="${esc(s.id)}" data-mode="saldo" class="btn btn-gold w-full mt-3">Renovar +${days} días (${money(s.price)})</button>` : ""}
       ${canRenew && bonus >= s.price ? `<button data-renew="${esc(s.id)}" data-mode="comision" class="btn btn-pink w-full mt-2">🎁 Renovar con comisión</button>` : ""}
     </div>`;
-  }));
-  $("my-accounts").innerHTML = cards.join("");
-  document.querySelectorAll("[data-renew]").forEach(b => b.addEventListener("click", () => renew(b.dataset.renew, b.dataset.mode)));
+  }).join("");
+  setModal(header + `<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <span class="text-gray-300">${mine.length} cuenta${mine.length === 1 ? "" : "s"}</span>
+      <button class="btn btn-cyan" data-copyall>📋 Copiar todas</button></div>
+    <div class="grid md:grid-cols-2 gap-4">${cards}</div>`);
 }
 
-async function renew(id, mode) {
+// ================= RENOVAR =================
+async function renewFlow(id, mode) {
   await refresh();
   const s = stock.find(x => x.id === id);
   if (!s || s.soldTo !== user.uid) return toast("Cuenta no encontrada");
   const days = s.days ?? 30, bal = profile.balance || 0, bon = profile.bonus || 0, fromBonus = mode === "comision", com = r2(s.price * COMM);
   if ((fromBonus ? bon : bal) < s.price) return toast(fromBonus ? "Tu comisión no alcanza." : "Saldo insuficiente. Pide una recarga.");
-  const aviso = fromBonus ? "Pagarás con tu COMISIÓN." : `Ganarás ${money(com)} de comisión.`;
-  if (!confirm(`¿Renovar ${svc(s.service).name} por ${money(s.price)} (+${days} días)?\n${aviso}`)) return;
+  const ok = await confirmView({
+    title: "Renovar cuenta",
+    body: `<p class="text-center">${esc(svc(s.service).name)}</p>
+      <div class="rounded-lg p-3 text-sm space-y-1 mt-3" style="background:rgba(255,255,255,.05)">
+        <div class="flex justify-between"><span>Precio</span><b>${money(s.price)}</b></div>
+        <div class="flex justify-between"><span>Se suman</span><b>${days} días</b></div>
+        <div class="flex justify-between"><span>Pago</span><b>${fromBonus ? "🎁 Con tu comisión" : "Con tu saldo"}</b></div>
+        ${fromBonus ? "" : `<div class="flex justify-between"><span>🎁 Ganarás</span><b style="color:var(--go)">+${money(com)}</b></div>`}
+      </div>`,
+    okText: "Renovar", okClass: "btn-gold"
+  });
+  if (!ok) return openMine();
+  busy = true;
+  setModal(spinnerView("Renovando…"));
   try {
     const exp = Math.max(s.expiresAt, Date.now()) + days * DAY, batch = writeBatch(db);
     batch.update(doc(db, "stock", id), { expiresAt: exp });
@@ -364,12 +517,14 @@ async function renew(id, mode) {
     batch.set(doc(collection(db, "sales")), { type: "renovacion", uid: user.uid, buyer: user.email, service: s.service, stockId: id,
       price: s.price, expiresAt: exp, createdAt: Date.now(), pay: fromBonus ? "comision" : "saldo", commission: fromBonus ? 0 : com });
     await batch.commit();
-    toast("Renovada ✅");
-    await refresh(); if (isAdmin) loadLog();
-  } catch (e) { console.error(e); toast("No se pudo renovar: " + e.message); await refresh(); }
+    busy = false;
+    toast("Renovada ✅ Vence el " + fdate(exp));
+    if (isAdmin) loadLog();
+  } catch (e) { busy = false; console.error(e); toast("No se pudo renovar: " + e.message); }
+  openMine();
 }
 
-// ---------- ADMIN: CARGA MASIVA ----------
+// ================= ADMIN: CARGA MASIVA =================
 $("btn-add-stock").addEventListener("click", async () => {
   const service = $("add-service").value, price = Number($("add-price").value), days = Number($("add-days").value) || 30;
   if (!(price > 0)) return toast("Escribe el precio");
@@ -408,7 +563,7 @@ $("btn-add-balance").addEventListener("click", async () => {
   } catch (e) { console.error(e); toast("Error: " + e.message); }
 });
 
-// ---------- ADMIN: REGISTRO Y CLIENTES ----------
+// ================= ADMIN: REGISTRO Y CLIENTES =================
 $("btn-reload-log").addEventListener("click", loadLog);
 async function loadLog() {
   try {
