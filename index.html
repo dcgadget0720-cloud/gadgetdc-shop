@@ -60,6 +60,7 @@ th{color:#9ca3af;font-weight:600}
 .ok-circle{width:70px;height:70px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;color:#02170f;
   background:linear-gradient(135deg,var(--gr),var(--cy));box-shadow:0 0 30px rgba(52,211,153,.6);animation:pop .4s ease-out}
 .err-circle{background:linear-gradient(135deg,#f87171,#dc2626);box-shadow:0 0 30px rgba(248,113,113,.5);color:#fff}
+.tile{display:block;width:100%;text-align:left;color:inherit;cursor:pointer;padding:0}
 </style>
   <link rel="icon" type="image/png" href="img/logo.png">
 </head>
@@ -89,7 +90,7 @@ th{color:#9ca3af;font-weight:600}
     <div class="flex items-center gap-3">
       <div id="hud-avatar" class="avatar">?</div>
       <div>
-        <div class="text-xs text-gray-400 tracking-widest orb">JUGADOR</div>
+        <div class="text-xs text-gray-400 tracking-widest orb">DISTRIBUIDOR</div>
         <div id="hud-name" class="orb text-xl neon-text font-bold"></div>
       </div>
     </div>
@@ -110,7 +111,8 @@ th{color:#9ca3af;font-weight:600}
         <input type="number" id="add-price" placeholder="Precio ($)" step="0.50" class="inp">
         <input type="number" id="add-days" placeholder="Duración (días)" value="30" class="inp">
       </div>
-      <textarea id="add-list" rows="6" placeholder="Una cuenta por línea:&#10;correo1@gmail.com:clave1&#10;correo2@gmail.com:clave2" class="inp font-mono text-sm"></textarea>
+      <p id="add-hint" class="text-xs mb-2" style="color:var(--cy)"></p>
+      <textarea id="add-list" rows="6" class="inp font-mono text-sm"></textarea>
       <button id="btn-add-stock" class="btn btn-purple w-full">Subir al catálogo</button>
     </div>
     <div class="panel p-6">
@@ -163,12 +165,16 @@ const ADMIN_EMAIL = "dcgadget0720@gmail.com";
 const COMM = 0.05;      // 5% de comisión
 const MAX_QTY = 10;     // máximo de cuentas por compra
 
-// Servicios fijos. Imagen: img/<img>.png  (si no existe, se muestra un diseño de color)
+// Texto final que se agrega al mensaje de "datos de acceso" (déjalo "" si no quieres nada)
+const NOTA_ACCESO = "⚠️ No cambies la clave ni los datos de la cuenta.\n🎮 Gadget DC Shop";
+
+// Servicios fijos. perfil:true = cuenta de 1 perfil (se carga como correo:clave:perfil)
+// Imagen: img/<img>.png  (si no existe, se muestra un diseño de color)
 const SERVICES = [
   { id: "netflix_full", name: "Netflix Completa", sub: "5 perfiles",     img: "netflix", c1: "#e50914", c2: "#4a0307" },
-  { id: "netflix_1",    name: "Netflix 1 Perfil", sub: "1 perfil",       img: "netflix", c1: "#b91c1c", c2: "#3b0a0a" },
+  { id: "netflix_1",    name: "Netflix 1 Perfil", sub: "1 perfil",       img: "netflix", c1: "#b91c1c", c2: "#3b0a0a", perfil: true },
   { id: "disney_full",  name: "Disney+ Completa", sub: "4 perfiles",     img: "disney",  c1: "#1e4fd8", c2: "#0a1b66" },
-  { id: "disney_1",     name: "Disney+ 1 Perfil", sub: "1 perfil",       img: "disney",  c1: "#2563eb", c2: "#172554" },
+  { id: "disney_1",     name: "Disney+ 1 Perfil", sub: "1 perfil",       img: "disney",  c1: "#2563eb", c2: "#172554", perfil: true },
   { id: "max_std",      name: "Max Standard",     sub: "Plan Standard",  img: "max",     c1: "#7c3aed", c2: "#2e1065" },
   { id: "flujotv",      name: "Flujo TV Completa",sub: "3 dispositivos", img: "flujotv", c1: "#f59e0b", c2: "#7c2d12" }
 ];
@@ -200,7 +206,47 @@ function tile(s) {
 }
 const imgTag = (sv, cls) => `<img src="img/${sv.img}.png" alt="${esc(sv.name)}" class="${cls}" onerror="this.onerror=null;this.src='${tile(sv)}'">`;
 
-let user = null, profile = null, stock = [], isAdmin = false, pendingName = "";
+// Normaliza los datos de una cuenta. Si es de 1 perfil y viene como "clave:perfil1" (cargas antiguas), lo separa.
+function normSec(serviceId, sec) {
+  const s = { email: sec?.email ?? "?", pass: sec?.pass ?? "?", profile: sec?.profile || "" };
+  if (svc(serviceId).perfil && !s.profile) {
+    const i = s.pass.lastIndexOf(":");
+    if (i > 0) { s.profile = s.pass.slice(i + 1).trim(); s.pass = s.pass.slice(0, i).trim(); }
+  }
+  return s;
+}
+
+// Mensaje bonito de "datos de acceso" (listo para pegar en WhatsApp)
+function accessText(sv, list) {
+  const blocks = list.map((it, i) => {
+    const L = [];
+    if (list.length > 1) L.push(`*Cuenta ${i + 1}*`);
+    L.push(`📺 Servicio: ${sv.name}`, `📧 Correo: ${it.sec.email}`, `🔑 Clave: ${it.sec.pass}`);
+    if (it.sec.profile) L.push(`👤 Perfil: ${it.sec.profile}`);
+    if (it.exp) L.push(`⏳ Vence: ${fdate(it.exp)}`);
+    return L.join("\n");
+  });
+  return `✅ *TUS DATOS DE ACCESO* ✅\n\n${blocks.join("\n\n")}` + (NOTA_ACCESO ? `\n\n${NOTA_ACCESO}` : "");
+}
+
+// Tarjeta visual con los datos de acceso + botón para copiar TODO el mensaje
+function accessCard(sv, sec, exp, extra = "") {
+  const row = (label, val, copy) => `<div class="flex items-center justify-between gap-2"><span>${label}: <b>${esc(val)}</b></span>${copy ? `<button class="btn btn-gray" style="padding:5px 8px" data-copy="${esc(val)}">📋</button>` : ""}</div>`;
+  return `<div class="card p-4">
+    <div class="orb text-sm mb-2" style="color:var(--gr)">✅ TUS DATOS DE ACCESO</div>
+    <div class="cred space-y-1">
+      ${row("📺 Servicio", sv.name, false)}
+      ${row("📧 Correo", sec.email, true)}
+      ${row("🔑 Clave", sec.pass, true)}
+      ${sec.profile ? row("👤 Perfil", sec.profile, true) : ""}
+      ${exp ? row("⏳ Vence", fdate(exp), false) : ""}
+    </div>
+    <button class="btn btn-cyan w-full mt-3" data-copy="${esc(accessText(sv, [{ sec, exp }]))}">📋 Copiar datos de acceso</button>
+    ${extra}
+  </div>`;
+}
+
+let user = null, profile = null, stock = [], isAdmin = false, pendingName = "", mineSvc = null;
 
 function toast(t) {
   const el = $("toast"); el.textContent = t; el.classList.remove("hidden");
@@ -221,8 +267,10 @@ let modalResolve = null, modalTok = 0, busy = false, copyAllText = "";
 function setModal(html) { $("modal-box").innerHTML = CLOSEBTN + html; }
 function openModal(html, wide) {
   modalTok++;
-  $("modal-box").className = "panel w-full " + (wide ? "max-w-3xl" : "max-w-md") + " max-h-[90vh] overflow-y-auto p-6 relative modal-in";
+  const visible = !$("modal").classList.contains("hidden");
+  $("modal-box").className = "panel w-full " + (wide ? "max-w-3xl" : "max-w-md") + " max-h-[90vh] overflow-y-auto p-6 relative" + (visible ? "" : " modal-in");
   setModal(html);
+  $("modal-box").scrollTop = 0;
   $("modal").classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
@@ -252,15 +300,14 @@ async function copyText(t) {
   try { await navigator.clipboard.writeText(t); }
   catch { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch {} a.remove(); }
 }
-const credBlock = sec => `<div class="cred">
-  <div class="flex items-center justify-between gap-2"><span>Correo: ${esc(sec.email)}</span><button class="btn btn-gray" style="padding:5px 8px" data-copy="${esc(sec.email)}">📋</button></div>
-  <div class="flex items-center justify-between gap-2 mt-1"><span>Clave: ${esc(sec.pass)}</span><button class="btn btn-gray" style="padding:5px 8px" data-copy="${esc(sec.pass)}">📋</button></div></div>`;
 
 document.addEventListener("click", e => {
   const c = e.target.closest("[data-copy]"); if (c) { copyText(c.dataset.copy); toast("Copiado ✅"); return; }
   if (e.target.closest("[data-copyall]")) { copyText(copyAllText); toast("Todo copiado ✅"); return; }
   const r = e.target.closest("[data-renew]"); if (r) { renewFlow(r.dataset.renew, r.dataset.mode); return; }
-  if (e.target.closest("[data-gomine]")) { openMine(); }
+  const t = e.target.closest("[data-minesvc]"); if (t) { openMine(t.dataset.minesvc); return; }
+  if (e.target.closest("[data-mineback]")) { openMine(); return; }
+  const g = e.target.closest("[data-gomine]"); if (g) { openMine(g.dataset.gomine || undefined); }
 });
 
 // ================= LOGIN / REGISTRO =================
@@ -287,7 +334,7 @@ $("btn-register").addEventListener("click", async () => {
   try { await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); } catch (e) { authError(e); }
 });
 $("btn-logout").addEventListener("click", () => { busy = false; closeModal(); signOut(auth); });
-$("btn-mine").addEventListener("click", openMine);
+$("btn-mine").addEventListener("click", () => openMine());
 
 onAuthStateChanged(auth, async u => {
   user = u;
@@ -301,7 +348,7 @@ onAuthStateChanged(auth, async u => {
   $("login-screen").classList.add("hidden");
   $("app-screen").classList.remove("hidden");
   $("admin-panel").classList.toggle("hidden", !isAdmin);
-  if (isAdmin) $("add-service").innerHTML = SERVICES.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  if (isAdmin) { $("add-service").innerHTML = SERVICES.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join(""); updateHint(); }
   await refresh();
   if (isAdmin) loadLog();
 });
@@ -343,7 +390,7 @@ function renderCatalog() {
   document.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", async () => { await refresh(); openBuy(b.dataset.buy); }));
   document.querySelectorAll("[data-restock]").forEach(b => b.addEventListener("click", () => {
     const id = b.dataset.restock, last = stock.filter(i => i.service === id).pop();
-    $("add-service").value = id;
+    $("add-service").value = id; updateHint();
     if (last) { $("add-price").value = last.price; $("add-days").value = last.days ?? 30; }
     $("stock-box").scrollIntoView({ behavior: "smooth", block: "center" });
     $("add-list").focus();
@@ -417,9 +464,9 @@ async function runBuy(serviceId, qty, fromBonus) {
         price: item.price, expiresAt: exp, createdAt: Date.now(), pay: fromBonus ? "comision" : "saldo", commission: fromBonus ? 0 : com });
       await batch.commit();
       if (fromBonus) bon = r2(bon - item.price); else { bal = r2(bal - item.price); bon = r2(bon + com); }
-      let sec = { email: "?", pass: "?" };
+      let sec = {};
       try { sec = (await getDoc(doc(db, "secrets", item.id))).data(); } catch (e) { console.error(e); }
-      bought.push({ item, sec, exp, com: fromBonus ? 0 : com });
+      bought.push({ item, sec: normSec(serviceId, sec), exp, com: fromBonus ? 0 : com });
       const p = $("prog"); if (p) p.textContent = `Comprando… ${bought.length}/${qty}`;
     } catch (e) { console.error(e); fails++; }
   }
@@ -434,7 +481,7 @@ async function runBuy(serviceId, qty, fromBonus) {
     return;
   }
   const comTotal = r2(bought.reduce((s, b) => s + b.com, 0));
-  copyAllText = bought.map(b => `${sv.name}\nCorreo: ${b.sec.email}\nClave: ${b.sec.pass}`).join("\n\n");
+  copyAllText = accessText(sv, bought.map(b => ({ sec: b.sec, exp: b.exp })));
   setModal(`<div class="text-center">
       <div class="ok-circle">✓</div>
       <h3 class="orb text-2xl font-black" style="color:var(--gr)">¡COMPRA EXITOSA!</h3>
@@ -442,48 +489,75 @@ async function runBuy(serviceId, qty, fromBonus) {
       ${bought.length < qty ? `<p class="text-sm mt-1" style="color:var(--go)">Solo se pudieron comprar ${bought.length} de ${qty} (cambió el stock).</p>` : ""}
       ${comTotal > 0 ? `<p class="text-sm mt-1" style="color:var(--go)">🎁 Ganaste ${money(comTotal)} de comisión</p>` : ""}
     </div>
-    <div class="mt-4 space-y-3 overflow-y-auto pr-1" style="max-height:38vh">${bought.map(b => credBlock(b.sec)).join("")}</div>
-    <p class="text-sm mt-3" style="color:var(--go)">⏳ Vencen el ${esc(fdate(bought[0].exp))}. Quedan guardadas en 🎒 Mis cuentas.</p>
+    <div class="mt-4 space-y-3 overflow-y-auto pr-1" style="max-height:44vh">${bought.map(b => accessCard(sv, b.sec, b.exp)).join("")}</div>
+    <p class="text-sm mt-3" style="color:var(--go)">Quedan guardadas en 🎒 Mis cuentas.</p>
     <div class="flex gap-3 mt-4 flex-wrap">
-      <button class="btn btn-cyan flex-1" data-copyall>📋 Copiar todo</button>
-      <button class="btn btn-gold flex-1" data-gomine>🎒 Mis cuentas</button>
+      <button class="btn btn-cyan flex-1" data-copyall>📋 Copiar todo${bought.length > 1 ? " (" + bought.length + ")" : ""}</button>
+      <button class="btn btn-gold flex-1" data-gomine="${serviceId}">🎒 Mis cuentas</button>
     </div>
     <button class="btn btn-gray w-full mt-3" data-close>Cerrar</button>`);
 }
 
-// ================= MIS CUENTAS (ventana) =================
-async function openMine() {
-  const header = `<h3 class="orb text-xl mb-4" style="color:var(--go)">🎒 MIS CUENTAS</h3>`;
-  openModal(header + `<div class="py-8"><div class="spinner"></div></div>`, true);
+// ================= MIS CUENTAS: lista de servicios -> detalle =================
+async function openMine(serviceId) {
+  mineSvc = serviceId || null;
+  const title = `<h3 class="orb text-xl mb-4" style="color:var(--go)">🎒 MIS CUENTAS</h3>`;
+  openModal(title + `<div class="py-8"><div class="spinner"></div></div>`, true);
   const tok = modalTok;
   await refresh();
-  const mine = stock.filter(s => s.soldTo === user.uid).sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
   if (tok !== modalTok) return;
-  if (!mine.length) { setModal(header + `<p class="text-gray-400 py-6 text-center">Aún no has comprado ninguna cuenta.</p>`); return; }
-  const secs = await Promise.all(mine.map(async s => { try { return (await getDoc(doc(db, "secrets", s.id))).data(); } catch { return { email: "?", pass: "?" }; } }));
+  const mineAll = stock.filter(s => s.soldTo === user.uid);
+
+  // ---------- LISTA DE SERVICIOS COMPRADOS ----------
+  if (!serviceId) {
+    if (!mineAll.length) { setModal(title + `<p class="text-gray-400 py-6 text-center">Aún no has comprado ninguna cuenta.</p>`); return; }
+    const groups = {};
+    mineAll.forEach(s => (groups[s.service] ||= []).push(s));
+    const idx = id => { const i = SERVICES.findIndex(s => s.id === id); return i < 0 ? 99 : i; };
+    const tiles = Object.keys(groups).sort((a, b) => idx(a) - idx(b)).map(id => {
+      const sv = svc(id), list = groups[id];
+      const soon = list.filter(s => s.expiresAt && Math.ceil((s.expiresAt - Date.now()) / DAY) <= 3 && s.expiresAt > Date.now()).length;
+      const expired = list.filter(s => s.expiresAt && s.expiresAt <= Date.now()).length;
+      return `<button class="card tile" data-minesvc="${esc(id)}">
+        ${imgTag(sv, "w-full h-24 object-cover")}
+        <div class="p-4">
+          <b class="orb">${esc(sv.name)}</b>
+          <p class="text-gray-300">${list.length} cuenta${list.length === 1 ? "" : "s"}</p>
+          ${expired ? `<p class="text-sm" style="color:#f87171">⚠️ ${expired} vencida${expired === 1 ? "" : "s"}</p>` : ""}
+          ${soon ? `<p class="text-sm" style="color:var(--go)">⏰ ${soon} por vencer</p>` : ""}
+        </div></button>`;
+    }).join("");
+    setModal(title + `<p class="text-gray-400 text-sm mb-4">Toca un servicio para ver tus cuentas (${mineAll.length} en total).</p>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">${tiles}</div>`);
+    return;
+  }
+
+  // ---------- DETALLE DE UN SERVICIO ----------
+  const sv = svc(serviceId);
+  const mine = mineAll.filter(s => s.service === serviceId).sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
+  const secs = await Promise.all(mine.map(async s => { try { return normSec(serviceId, (await getDoc(doc(db, "secrets", s.id))).data()); } catch { return normSec(serviceId, {}); } }));
   if (tok !== modalTok) return;
   const bonus = profile.bonus || 0;
-  copyAllText = mine.map((s, i) => `${svc(s.service).name}\nCorreo: ${secs[i].email}\nClave: ${secs[i].pass}`).join("\n\n");
+  copyAllText = accessText(sv, mine.map((s, i) => ({ sec: secs[i], exp: s.expiresAt })));
   const cards = mine.map((s, i) => {
     const days = s.days ?? 30;
-    let estado = '<span class="text-gray-400">Sin fecha de vencimiento</span>', canRenew = false;
+    let extra = "";
     if (s.expiresAt) {
       const left = Math.ceil((s.expiresAt - Date.now()) / DAY);
-      estado = left > 0
-        ? `<span style="color:${left <= 3 ? "var(--go)" : "var(--gr)"}">Vence: ${esc(fdate(s.expiresAt))} (${left} días restantes)</span>`
-        : `<span style="color:#f87171">Vencida el ${esc(fdate(s.expiresAt))}</span>`;
-      canRenew = true;
+      extra += left > 0
+        ? `<p class="mt-2 text-sm" style="color:${left <= 3 ? "var(--go)" : "var(--gr)"}">${left} días restantes</p>`
+        : `<p class="mt-2 text-sm" style="color:#f87171">Vencida</p>`;
+      extra += `<button data-renew="${esc(s.id)}" data-mode="saldo" class="btn btn-gold w-full mt-2">Renovar +${days} días (${money(s.price)})</button>`;
+      if (bonus >= s.price) extra += `<button data-renew="${esc(s.id)}" data-mode="comision" class="btn btn-pink w-full mt-2">🎁 Renovar con comisión</button>`;
     }
-    return `<div class="card p-4"><b class="orb">${esc(svc(s.service).name)}</b>
-      <div class="mt-2">${credBlock(secs[i])}</div>
-      <p class="mt-2 text-sm">${estado}</p>
-      ${canRenew ? `<button data-renew="${esc(s.id)}" data-mode="saldo" class="btn btn-gold w-full mt-3">Renovar +${days} días (${money(s.price)})</button>` : ""}
-      ${canRenew && bonus >= s.price ? `<button data-renew="${esc(s.id)}" data-mode="comision" class="btn btn-pink w-full mt-2">🎁 Renovar con comisión</button>` : ""}
-    </div>`;
+    return accessCard(sv, secs[i], s.expiresAt, extra);
   }).join("");
-  setModal(header + `<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <span class="text-gray-300">${mine.length} cuenta${mine.length === 1 ? "" : "s"}</span>
-      <button class="btn btn-cyan" data-copyall>📋 Copiar todas</button></div>
+  setModal(`<div class="flex items-center justify-between gap-2 mb-4 flex-wrap">
+      <button class="btn btn-gray" data-mineback>← Servicios</button>
+      <button class="btn btn-cyan" data-copyall>📋 Copiar todas (${mine.length})</button>
+    </div>
+    <h3 class="orb text-xl mb-1 neon-text">${esc(sv.name)}</h3>
+    <p class="text-gray-400 text-sm mb-4">${mine.length} cuenta${mine.length === 1 ? "" : "s"} · ordenadas por vencimiento</p>
     <div class="grid md:grid-cols-2 gap-4">${cards}</div>`);
 }
 
@@ -505,7 +579,7 @@ async function renewFlow(id, mode) {
       </div>`,
     okText: "Renovar", okClass: "btn-gold"
   });
-  if (!ok) return openMine();
+  if (!ok) return openMine(mineSvc || undefined);
   busy = true;
   setModal(spinnerView("Renovando…"));
   try {
@@ -521,30 +595,48 @@ async function renewFlow(id, mode) {
     toast("Renovada ✅ Vence el " + fdate(exp));
     if (isAdmin) loadLog();
   } catch (e) { busy = false; console.error(e); toast("No se pudo renovar: " + e.message); }
-  openMine();
+  openMine(mineSvc || undefined);
 }
 
 // ================= ADMIN: CARGA MASIVA =================
+function updateHint() {
+  const sv = svc($("add-service").value);
+  $("add-hint").textContent = sv.perfil
+    ? "Formato (1 perfil): correo:clave:perfil   Ej: dy011@gmail.com:neon09:perfil1"
+    : "Formato: correo:clave   Ej: cuenta@gmail.com:clave123";
+  $("add-list").placeholder = sv.perfil
+    ? "Una cuenta por línea:\ncorreo1@gmail.com:clave1:perfil1\ncorreo1@gmail.com:clave1:perfil2"
+    : "Una cuenta por línea:\ncorreo1@gmail.com:clave1\ncorreo2@gmail.com:clave2";
+}
+$("add-service").addEventListener("change", updateHint);
+
 $("btn-add-stock").addEventListener("click", async () => {
-  const service = $("add-service").value, price = Number($("add-price").value), days = Number($("add-days").value) || 30;
+  const service = $("add-service").value, sv = svc(service), price = Number($("add-price").value), days = Number($("add-days").value) || 30;
   if (!(price > 0)) return toast("Escribe el precio");
-  const rows = []; let bad = 0;
+  const rows = []; let bad = 0, noProfile = 0;
   $("add-list").value.split("\n").map(l => l.trim()).filter(Boolean).forEach(l => {
     const m = l.match(/^([^\s:|;,]+@[^\s:|;,]+)[\s:|;,]+(.+)$/);
-    if (m) rows.push({ email: m[1], pass: m[2].trim() }); else bad++;
+    if (!m) { bad++; return; }
+    let pass = m[2].trim(), prof = "";
+    if (sv.perfil) {
+      const i = pass.search(/[:|;,][^:|;,]*$/);       // último separador = perfil
+      if (i > 0) { prof = pass.slice(i + 1).trim(); pass = pass.slice(0, i).trim(); }
+      if (!prof) noProfile++;
+    }
+    rows.push({ email: m[1], pass, profile: prof });
   });
-  if (!rows.length) return toast("No encontré cuentas válidas. Formato: correo:clave (una por línea)");
+  if (!rows.length) return toast("No encontré cuentas válidas. Revisa el formato indicado arriba del cuadro.");
   try {
     for (let i = 0; i < rows.length; i += 200) {
       const batch = writeBatch(db);
       rows.slice(i, i + 200).forEach(r => {
         const ref = doc(collection(db, "stock"));
         batch.set(ref, { service, price, days, sold: false, soldTo: null });
-        batch.set(doc(db, "secrets", ref.id), { email: r.email, pass: r.pass });
+        batch.set(doc(db, "secrets", ref.id), { email: r.email, pass: r.pass, profile: r.profile });
       });
       await batch.commit();
     }
-    toast(`✅ ${rows.length} cuentas agregadas a ${svc(service).name}` + (bad ? ` (${bad} líneas ignoradas)` : ""));
+    toast(`✅ ${rows.length} cuentas agregadas a ${sv.name}` + (bad ? ` (${bad} líneas ignoradas)` : "") + (noProfile ? ` · ${noProfile} sin perfil` : ""));
     $("add-list").value = "";
     await refresh();
   } catch (e) { console.error(e); toast("Error: " + e.message); }
@@ -571,7 +663,11 @@ async function loadLog() {
     const sales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const accs = {};
     await Promise.all([...new Set(sales.map(s => s.stockId))].map(async id => {
-      try { accs[id] = (await getDoc(doc(db, "secrets", id))).data()?.email || "?"; } catch { accs[id] = "?"; }
+      try {
+        const sale = sales.find(x => x.stockId === id);
+        const sec = normSec(sale?.service, (await getDoc(doc(db, "secrets", id))).data());
+        accs[id] = sec.email + (sec.profile ? " · " + sec.profile : "");
+      } catch { accs[id] = "?"; }
     }));
     $("sales-log").innerHTML = sales.length ? `<table class="w-full"><tr><th>Fecha</th><th>Tipo</th><th>Cliente</th><th>Servicio</th><th>Cuenta</th><th>Precio</th><th>Pago</th><th>Vence</th></tr>` +
       sales.map(s => `<tr><td>${esc(fdate(s.createdAt))}</td><td>${s.type === "renovacion" ? "🔄 Renovación" : "🛒 Compra"}</td><td>${esc(s.buyer)}</td><td>${esc(svc(s.service).name)}</td><td>${esc(accs[s.stockId])}</td><td>${money(s.price)}</td><td>${s.pay === "comision" ? "🎁 Comisión" : "Saldo"}</td><td>${esc(fdate(s.expiresAt))}</td></tr>`).join("") + "</table>"
