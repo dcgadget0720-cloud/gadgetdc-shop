@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gadget DC Shop - Streaming</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--cy:#22d3ee;--pu:#a855f7;--pk:#ec4899;--gr:#34d399;--go:#fbbf24}
+body{
+  color:#e5e7eb;font-family:'Rajdhani',system-ui,sans-serif;font-size:17px;letter-spacing:.2px;
+  background-color:#07070f;
+  background-image:
+    radial-gradient(circle at 15% 0%,rgba(168,85,247,.22),transparent 40%),
+    radial-gradient(circle at 95% 15%,rgba(34,211,238,.16),transparent 40%),
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:auto,auto,38px 38px,38px 38px;background-attachment:fixed;
+}
+.orb{font-family:'Orbitron','Rajdhani',sans-serif}
+.neon-text{background:linear-gradient(90deg,var(--cy),var(--pu),var(--pk));-webkit-background-clip:text;background-clip:text;color:transparent}
+.panel{background:rgba(14,14,30,.78);border:1px solid rgba(168,85,247,.35);border-radius:14px;
+  box-shadow:0 0 20px rgba(168,85,247,.12),inset 0 0 24px rgba(34,211,238,.03);backdrop-filter:blur(8px)}
+.card{background:rgba(14,14,30,.85);border:1px solid rgba(34,211,238,.25);border-radius:14px;overflow:hidden;transition:.25s}
+.card:hover{transform:translateY(-4px);border-color:var(--cy);box-shadow:0 0 22px rgba(34,211,238,.35)}
+.btn{font-family:'Orbitron',sans-serif;text-transform:uppercase;font-size:12px;font-weight:700;letter-spacing:1px;padding:11px 12px;border-radius:8px;transition:.2s;cursor:pointer;border:0}
+.btn:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+.btn-cyan{background:linear-gradient(90deg,#0891b2,var(--cy));color:#03141b;box-shadow:0 0 14px rgba(34,211,238,.45)}
+.btn-purple{background:linear-gradient(90deg,#7c3aed,var(--pu));color:#fff;box-shadow:0 0 14px rgba(168,85,247,.45)}
+.btn-pink{background:linear-gradient(90deg,#db2777,var(--pk));color:#fff;box-shadow:0 0 14px rgba(236,72,153,.45)}
+.btn-gold{background:linear-gradient(90deg,#d97706,var(--go));color:#1a1000;box-shadow:0 0 14px rgba(251,191,36,.4)}
+.btn-green{background:linear-gradient(90deg,#059669,var(--gr));color:#02170f;box-shadow:0 0 14px rgba(52,211,153,.4)}
+.btn-gray{background:#1f2937;color:#d1d5db}
+.btn-red{background:#dc2626;color:#fff}
+.inp{width:100%;padding:10px 12px;margin-bottom:10px;border-radius:8px;background:rgba(8,8,22,.85);border:1px solid rgba(34,211,238,.25);color:#fff;font-size:16px;font-family:inherit}
+.inp:focus{outline:none;border-color:var(--cy);box-shadow:0 0 10px rgba(34,211,238,.4)}
+.chip{border-radius:10px;padding:6px 14px;border:1px solid;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.chip small{font-size:10px;letter-spacing:2px;font-family:'Orbitron',sans-serif;opacity:.8}
+.chip b{font-family:'Orbitron',sans-serif;font-size:18px}
+.badge{position:absolute;top:10px;right:10px;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 8px;border-radius:6px}
+.avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-weight:900;font-size:20px;
+  background:linear-gradient(135deg,var(--cy),var(--pu));color:#07070f;box-shadow:0 0 14px rgba(34,211,238,.55)}
+.sect{font-family:'Orbitron',sans-serif;font-weight:700;letter-spacing:1px;margin-bottom:18px;padding-bottom:8px;border-bottom:1px solid rgba(168,85,247,.35)}
+.cred{background:rgba(52,211,153,.08);border:1px dashed rgba(52,211,153,.5);border-radius:8px;padding:10px;font-family:ui-monospace,monospace;word-break:break-all}
+th,td{padding:7px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.07)}
+th{color:#9ca3af;font-weight:600}
+</style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+<!-- LOGIN -->
+<div id="login-screen" class="max-w-md mx-auto mt-10 panel p-8">
+  <div class="text-center mb-6">
+    <div class="text-5xl mb-2">🎮</div>
+    <h1 class="orb neon-text text-3xl font-black">GADGET DC SHOP</h1>
+    <p class="text-gray-400 mt-1">Cuentas de streaming · Entrega inmediata</p>
+  </div>
+  <input type="text" id="reg-name" maxlength="30" placeholder="Tu nombre o apodo" class="inp hidden">
+  <input type="email" id="email" placeholder="Correo electrónico" class="inp">
+  <input type="password" id="password" placeholder="Contraseña (mínimo 6)" class="inp">
+  <button id="btn-login" class="btn btn-cyan w-full mb-3">Iniciar sesión</button>
+  <button id="btn-register" class="btn btn-purple w-full">Crear cuenta nueva</button>
+  <button id="btn-back" class="hidden w-full mt-3 text-sm text-gray-400 underline">← Ya tengo cuenta</button>
+  <p id="auth-error" class="text-red-400 text-center mt-4 hidden"></p>
+</div>
+
+<!-- TIENDA -->
+<div id="app-screen" class="hidden max-w-6xl mx-auto">
+
+  <!-- HUD -->
+  <nav class="panel p-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div id="hud-avatar" class="avatar">?</div>
+      <div>
+        <div class="text-xs text-gray-400 tracking-widest orb">JUGADOR</div>
+        <div id="hud-name" class="orb text-xl neon-text font-bold"></div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap justify-center">
+      <div class="chip" style="border-color:rgba(52,211,153,.5);color:var(--gr)"><small>SALDO</small><b id="user-balance">$0.00</b></div>
+      <div class="chip" style="border-color:rgba(251,191,36,.5);color:var(--go)"><small>🎁 COMISIÓN</small><b id="user-bonus">$0.00</b></div>
+      <button id="btn-logout" class="btn btn-red">Salir</button>
+    </div>
+  </nav>
+
+  <!-- ADMIN -->
+  <div id="admin-panel" class="hidden grid md:grid-cols-2 gap-6 mb-8">
+    <div id="stock-box" class="panel p-6">
+      <h3 class="orb text-lg mb-4" style="color:var(--pu)">➕ CARGAR STOCK (MASIVO)</h3>
+      <select id="add-service" class="inp"></select>
+      <div class="grid grid-cols-2 gap-3">
+        <input type="number" id="add-price" placeholder="Precio ($)" step="0.50" class="inp">
+        <input type="number" id="add-days" placeholder="Duración (días)" value="30" class="inp">
+      </div>
+      <textarea id="add-list" rows="6" placeholder="Una cuenta por línea:&#10;correo1@gmail.com:clave1&#10;correo2@gmail.com:clave2" class="inp font-mono text-sm"></textarea>
+      <button id="btn-add-stock" class="btn btn-purple w-full">Subir al catálogo</button>
+    </div>
+    <div class="panel p-6">
+      <h3 class="orb text-lg mb-4" style="color:var(--gr)">💰 RECARGAR SALDO</h3>
+      <input type="email" id="balance-email" placeholder="Correo del cliente registrado" class="inp">
+      <input type="number" id="balance-amount" placeholder="Monto a recargar ($)" class="inp">
+      <button id="btn-add-balance" class="btn btn-green w-full">Añadir saldo</button>
+    </div>
+    <div class="panel p-6 md:col-span-2">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="orb text-lg" style="color:var(--go)">⏰ PRÓXIMAS A VENCER</h3>
+        <button id="btn-reload-log" class="btn btn-gray">Actualizar</button>
+      </div>
+      <div id="expiring" class="overflow-x-auto text-sm">Cargando...</div>
+    </div>
+    <div class="panel p-6 md:col-span-2">
+      <h3 class="orb text-lg mb-3" style="color:var(--cy)">📒 REGISTRO DE VENTAS Y RENOVACIONES</h3>
+      <div id="sales-log" class="overflow-x-auto text-sm">Cargando...</div>
+    </div>
+    <div class="panel p-6 md:col-span-2">
+      <h3 class="orb text-lg mb-3" style="color:var(--pk)">👥 CLIENTES</h3>
+      <div id="clients" class="overflow-x-auto text-sm">Cargando...</div>
+    </div>
+  </div>
+
+  <div class="panel p-4 mb-8 text-sm md:text-base" style="border-color:rgba(251,191,36,.4)">
+    ⏳ Cada cuenta dura <b>30 días</b> desde la compra; antes de que venza puedes renovarla.<br>
+    🎁 Ganas <b>5% de comisión</b> en cada compra o renovación pagada con saldo. Se acumula en <b>COMISIÓN</b> y la puedes usar para comprar cuando te alcance.
+  </div>
+
+  <div id="client-panel">
+    <h3 class="sect text-2xl neon-text">🕹️ SERVICIOS</h3>
+    <div id="store-catalog" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"></div>
+    <div id="just-bought"></div>
+    <h3 class="sect text-2xl" style="color:var(--go)">🎒 MIS CUENTAS</h3>
+    <div id="my-accounts" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <p class="text-gray-400 col-span-2">Aún no has comprado ninguna cuenta.</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 panel px-5 py-3 z-50 max-w-[90%] text-center"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, orderBy, limit, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const ADMIN_EMAIL = "dcgadget0720@gmail.com";
+const COMM = 0.05;   // 5% de comisión
+
+// Servicios fijos. Imagen: img/<img>.png  (si no existe, se muestra un diseño de color)
+const SERVICES = [
+  { id: "netflix_full", name: "Netflix Completa", sub: "5 perfiles",     img: "netflix", c1: "#e50914", c2: "#4a0307" },
+  { id: "netflix_1",    name: "Netflix 1 Perfil", sub: "1 perfil",       img: "netflix", c1: "#b91c1c", c2: "#3b0a0a" },
+  { id: "disney_full",  name: "Disney+ Completa", sub: "4 perfiles",     img: "disney",  c1: "#1e4fd8", c2: "#0a1b66" },
+  { id: "disney_1",     name: "Disney+ 1 Perfil", sub: "1 perfil",       img: "disney",  c1: "#2563eb", c2: "#172554" },
+  { id: "max_std",      name: "Max Standard",     sub: "Plan Standard",  img: "max",     c1: "#7c3aed", c2: "#2e1065" },
+  { id: "flujotv",      name: "Flujo TV Completa",sub: "3 dispositivos", img: "flujotv", c1: "#f59e0b", c2: "#7c2d12" }
+];
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC-P8IbLzjUG9WKlVCuoZHTpLx2g9ySaWE",
+  authDomain: "gadget-dc-shop.firebaseapp.com",
+  projectId: "gadget-dc-shop",
+  storageBucket: "gadget-dc-shop.firebasestorage.app",
+  messagingSenderId: "731036537989",
+  appId: "1:731036537989:web:14ee3514d58f6a643f05ec",
+  measurementId: "G-013W3K3T4Z"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = n => "$" + Number(n || 0).toFixed(2);
+const r2 = n => Math.round(n * 100) / 100;
+const DAY = 86400000;
+const svc = id => SERVICES.find(s => s.id === id) || { id, name: id, sub: "", c1: "#374151", c2: "#111827" };
+const fdate = ms => ms ? new Date(ms).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" }) : "-";
+
+function tile(s) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${s.c1}"/><stop offset="1" stop-color="${s.c2}"/></linearGradient></defs><rect width="400" height="200" fill="url(#g)"/><text x="200" y="105" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="white" text-anchor="middle">${s.name}</text><text x="200" y="145" font-family="Arial,sans-serif" font-size="22" fill="rgba(255,255,255,.8)" text-anchor="middle">${s.sub}</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+let user = null, profile = null, stock = [], isAdmin = false, pendingName = "";
+
+function toast(t) {
+  const el = $("toast"); el.textContent = t; el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 4500);
+}
+function showErr(msg) { const el = $("auth-error"); el.textContent = msg; el.classList.remove("hidden"); }
+function authError(e) {
+  const m = { "auth/invalid-credential": "Correo o contraseña incorrectos", "auth/email-already-in-use": "Ese correo ya está registrado",
+    "auth/weak-password": "La contraseña debe tener mínimo 6 caracteres", "auth/invalid-email": "Correo inválido",
+    "auth/operation-not-allowed": "Falta activar Email/Contraseña en Firebase", "auth/missing-password": "Escribe la contraseña" };
+  showErr(m[e.code] || e.message);
+}
+
+// ---------- LOGIN / REGISTRO ----------
+let regMode = false;
+function setRegMode(on) {
+  regMode = on;
+  $("reg-name").classList.toggle("hidden", !on);
+  $("btn-login").classList.toggle("hidden", on);
+  $("btn-back").classList.toggle("hidden", !on);
+  $("btn-register").textContent = on ? "Registrarme" : "Crear cuenta nueva";
+  $("auth-error").classList.add("hidden");
+  if (on) $("reg-name").focus();
+}
+$("btn-back").addEventListener("click", () => setRegMode(false));
+$("btn-login").addEventListener("click", async () => {
+  $("auth-error").classList.add("hidden");
+  try { await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); } catch (e) { authError(e); }
+});
+$("btn-register").addEventListener("click", async () => {
+  if (!regMode) return setRegMode(true);
+  const name = $("reg-name").value.trim();
+  if (!name) return showErr("Escribe tu nombre o apodo");
+  pendingName = name;
+  try { await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); } catch (e) { authError(e); }
+});
+$("btn-logout").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, async u => {
+  user = u;
+  if (!u) { $("login-screen").classList.remove("hidden"); $("app-screen").classList.add("hidden"); setRegMode(false); return; }
+  isAdmin = u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const ref = doc(db, "users", u.uid), snap = await getDoc(ref);
+  const fallback = u.email.split("@")[0].slice(0, 30);
+  if (!snap.exists()) await setDoc(ref, { email: u.email.toLowerCase(), name: pendingName || fallback, balance: 0, bonus: 0 });
+  else if (!snap.data().name) await updateDoc(ref, { name: fallback });
+  pendingName = "";
+  $("login-screen").classList.add("hidden");
+  $("app-screen").classList.remove("hidden");
+  $("admin-panel").classList.toggle("hidden", !isAdmin);
+  if (isAdmin) $("add-service").innerHTML = SERVICES.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  await refresh();
+  if (isAdmin) loadLog();
+});
+
+async function refresh() {
+  const [p, s] = await Promise.all([getDoc(doc(db, "users", user.uid)), getDocs(collection(db, "stock"))]);
+  profile = p.data();
+  stock = s.docs.map(d => ({ id: d.id, ...d.data() }));
+  const name = profile.name || user.email.split("@")[0];
+  $("hud-name").textContent = name;
+  $("hud-avatar").textContent = (Array.from(name)[0] || "?").toUpperCase();
+  $("user-balance").textContent = money(profile.balance);
+  $("user-bonus").textContent = money(profile.bonus || 0);
+  renderCatalog(); renderMine();
+}
+
+// ---------- CATALOGO ----------
+function renderCatalog() {
+  const bonus = profile.bonus || 0;
+  $("store-catalog").innerHTML = SERVICES.map(sv => {
+    const items = stock.filter(i => i.service === sv.id);
+    const free = items.filter(i => !i.sold);
+    const ref = free[0] || items[items.length - 1];
+    const days = ref ? (ref.days ?? 30) : 30;
+    const n = free.length;
+    const badge = n === 0 ? `<span class="badge" style="background:#dc2626;color:#fff">AGOTADO</span>`
+                : n <= 3 ? `<span class="badge" style="background:var(--go);color:#1a1000">POCAS UNIDADES</span>` : "";
+    return `<div class="card">
+      <div class="relative">
+        <img src="img/${sv.img}.png" alt="${esc(sv.name)}" class="w-full h-36 object-cover" onerror="this.onerror=null;this.src='${tile(sv)}'">${badge}
+      </div>
+      <div class="p-5">
+        <h4 class="orb text-lg font-bold">${esc(sv.name)}</h4>
+        <p class="text-sm" style="color:var(--cy)">${esc(sv.sub)}</p>
+        <p class="orb text-3xl font-black my-1" style="color:var(--gr)">${ref ? money(ref.price) : "—"}</p>
+        <p class="text-gray-400 text-sm mb-3">⏳ ${days} días · ${n ? n + " disponibles" : "Sin stock"}</p>
+        <button data-buy="${sv.id}" data-mode="saldo" class="btn btn-cyan w-full" ${n ? "" : "disabled"}>Comprar con saldo</button>
+        ${ref && n && bonus >= ref.price ? `<button data-buy="${sv.id}" data-mode="comision" class="btn btn-gold w-full mt-2">🎁 Pagar con comisión</button>` : ""}
+        ${isAdmin ? `<button data-restock="${sv.id}" class="btn btn-purple w-full mt-2">➕ Cargar stock</button>` : ""}
+      </div></div>`;
+  }).join("");
+  document.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", () => buy(b.dataset.buy, b.dataset.mode)));
+  document.querySelectorAll("[data-restock]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.restock, last = stock.filter(i => i.service === id).pop();
+    $("add-service").value = id;
+    if (last) { $("add-price").value = last.price; $("add-days").value = last.days ?? 30; }
+    $("stock-box").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("add-list").focus();
+  }));
+}
+
+// ---------- COMPRAR ----------
+async function buy(serviceId, mode) {
+  await refresh();
+  const item = stock.find(s => s.service === serviceId && !s.sold);
+  const name = svc(serviceId).name;
+  if (!item) return toast("Se agotó");
+  const bal = profile.balance || 0, bon = profile.bonus || 0, fromBonus = mode === "comision";
+  if ((fromBonus ? bon : bal) < item.price) return toast(fromBonus ? "Tu comisión no alcanza." : "Saldo insuficiente. Pide una recarga.");
+  const days = item.days ?? 30, com = r2(item.price * COMM);
+  const aviso = fromBonus ? "Pagarás con tu COMISIÓN." : `Ganarás ${money(com)} de comisión.`;
+  if (!confirm(`¿Comprar ${name} por ${money(item.price)}?\nLa cuenta dura ${days} días desde hoy.\n${aviso}`)) return;
+  try {
+    const exp = Date.now() + days * DAY, batch = writeBatch(db);
+    batch.update(doc(db, "stock", item.id), { sold: true, soldTo: user.uid, expiresAt: exp });
+    batch.update(doc(db, "users", user.uid), fromBonus
+      ? { bonus: r2(bon - item.price), lastOp: item.id }
+      : { balance: r2(bal - item.price), bonus: r2(bon + com), lastOp: item.id });
+    batch.set(doc(collection(db, "sales")), { type: "compra", uid: user.uid, buyer: user.email, service: serviceId, stockId: item.id,
+      price: item.price, expiresAt: exp, createdAt: Date.now(), pay: fromBonus ? "comision" : "saldo", commission: fromBonus ? 0 : com });
+    await batch.commit();
+    const sec = (await getDoc(doc(db, "secrets", item.id))).data();
+    $("just-bought").innerHTML = `<div class="panel p-5 mb-10" style="border-color:rgba(52,211,153,.6)">
+      <b style="color:var(--gr)" class="orb">✅ ¡COMPRA EXITOSA! ${esc(name)}</b>
+      <div class="cred mt-3">Correo: ${esc(sec.email)}<br>Clave: ${esc(sec.pass)}</div>
+      <p class="mt-2 text-sm" style="color:var(--go)">⏳ Vence el ${esc(fdate(exp))} (${days} días). Puedes renovarla antes de esa fecha.</p></div>`;
+    await refresh(); if (isAdmin) loadLog();
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo completar (quizás otra persona la compró primero). Intenta de nuevo.");
+    await refresh();
+  }
+}
+
+// ---------- MIS CUENTAS + RENOVAR ----------
+async function renderMine() {
+  const mine = stock.filter(s => s.soldTo === user.uid).sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
+  if (!mine.length) { $("my-accounts").innerHTML = '<p class="text-gray-400 col-span-2">Aún no has comprado ninguna cuenta.</p>'; return; }
+  const bonus = profile.bonus || 0;
+  const cards = await Promise.all(mine.map(async s => {
+    const sec = (await getDoc(doc(db, "secrets", s.id))).data();
+    const days = s.days ?? 30;
+    let estado = '<span class="text-gray-400">Sin fecha de vencimiento</span>', canRenew = false;
+    if (s.expiresAt) {
+      const left = Math.ceil((s.expiresAt - Date.now()) / DAY);
+      estado = left > 0
+        ? `<span style="color:${left <= 3 ? "var(--go)" : "var(--gr)"}">Vence: ${esc(fdate(s.expiresAt))} (${left} días restantes)</span>`
+        : `<span style="color:#f87171">Vencida el ${esc(fdate(s.expiresAt))}</span>`;
+      canRenew = true;
+    }
+    return `<div class="card p-4"><b class="orb">${esc(svc(s.service).name)}</b>
+      <div class="cred mt-2">Correo: ${esc(sec.email)}<br>Clave: ${esc(sec.pass)}</div>
+      <p class="mt-2 text-sm">${estado}</p>
+      ${canRenew ? `<button data-renew="${esc(s.id)}" data-mode="saldo" class="btn btn-gold w-full mt-3">Renovar +${days} días (${money(s.price)})</button>` : ""}
+      ${canRenew && bonus >= s.price ? `<button data-renew="${esc(s.id)}" data-mode="comision" class="btn btn-pink w-full mt-2">🎁 Renovar con comisión</button>` : ""}
+    </div>`;
+  }));
+  $("my-accounts").innerHTML = cards.join("");
+  document.querySelectorAll("[data-renew]").forEach(b => b.addEventListener("click", () => renew(b.dataset.renew, b.dataset.mode)));
+}
+
+async function renew(id, mode) {
+  await refresh();
+  const s = stock.find(x => x.id === id);
+  if (!s || s.soldTo !== user.uid) return toast("Cuenta no encontrada");
+  const days = s.days ?? 30, bal = profile.balance || 0, bon = profile.bonus || 0, fromBonus = mode === "comision", com = r2(s.price * COMM);
+  if ((fromBonus ? bon : bal) < s.price) return toast(fromBonus ? "Tu comisión no alcanza." : "Saldo insuficiente. Pide una recarga.");
+  const aviso = fromBonus ? "Pagarás con tu COMISIÓN." : `Ganarás ${money(com)} de comisión.`;
+  if (!confirm(`¿Renovar ${svc(s.service).name} por ${money(s.price)} (+${days} días)?\n${aviso}`)) return;
+  try {
+    const exp = Math.max(s.expiresAt, Date.now()) + days * DAY, batch = writeBatch(db);
+    batch.update(doc(db, "stock", id), { expiresAt: exp });
+    batch.update(doc(db, "users", user.uid), fromBonus
+      ? { bonus: r2(bon - s.price), lastOp: id }
+      : { balance: r2(bal - s.price), bonus: r2(bon + com), lastOp: id });
+    batch.set(doc(collection(db, "sales")), { type: "renovacion", uid: user.uid, buyer: user.email, service: s.service, stockId: id,
+      price: s.price, expiresAt: exp, createdAt: Date.now(), pay: fromBonus ? "comision" : "saldo", commission: fromBonus ? 0 : com });
+    await batch.commit();
+    toast("Renovada ✅");
+    await refresh(); if (isAdmin) loadLog();
+  } catch (e) { console.error(e); toast("No se pudo renovar: " + e.message); await refresh(); }
+}
+
+// ---------- ADMIN: CARGA MASIVA ----------
+$("btn-add-stock").addEventListener("click", async () => {
+  const service = $("add-service").value, price = Number($("add-price").value), days = Number($("add-days").value) || 30;
+  if (!(price > 0)) return toast("Escribe el precio");
+  const rows = []; let bad = 0;
+  $("add-list").value.split("\n").map(l => l.trim()).filter(Boolean).forEach(l => {
+    const m = l.match(/^([^\s:|;,]+@[^\s:|;,]+)[\s:|;,]+(.+)$/);
+    if (m) rows.push({ email: m[1], pass: m[2].trim() }); else bad++;
+  });
+  if (!rows.length) return toast("No encontré cuentas válidas. Formato: correo:clave (una por línea)");
+  try {
+    for (let i = 0; i < rows.length; i += 200) {
+      const batch = writeBatch(db);
+      rows.slice(i, i + 200).forEach(r => {
+        const ref = doc(collection(db, "stock"));
+        batch.set(ref, { service, price, days, sold: false, soldTo: null });
+        batch.set(doc(db, "secrets", ref.id), { email: r.email, pass: r.pass });
+      });
+      await batch.commit();
+    }
+    toast(`✅ ${rows.length} cuentas agregadas a ${svc(service).name}` + (bad ? ` (${bad} líneas ignoradas)` : ""));
+    $("add-list").value = "";
+    await refresh();
+  } catch (e) { console.error(e); toast("Error: " + e.message); }
+});
+
+$("btn-add-balance").addEventListener("click", async () => {
+  const email = $("balance-email").value.trim().toLowerCase(), amount = Number($("balance-amount").value);
+  if (!email || !amount) return toast("Escribe correo y monto");
+  try {
+    const r = await getDocs(query(collection(db, "users"), where("email", "==", email)));
+    if (r.empty) return toast("Ese cliente no está registrado");
+    await updateDoc(r.docs[0].ref, { balance: increment(amount) });
+    toast("Saldo añadido ✅");
+    $("balance-email").value = ""; $("balance-amount").value = "";
+    loadLog();
+  } catch (e) { console.error(e); toast("Error: " + e.message); }
+});
+
+// ---------- ADMIN: REGISTRO Y CLIENTES ----------
+$("btn-reload-log").addEventListener("click", loadLog);
+async function loadLog() {
+  try {
+    const snap = await getDocs(query(collection(db, "sales"), orderBy("createdAt", "desc"), limit(150)));
+    const sales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const accs = {};
+    await Promise.all([...new Set(sales.map(s => s.stockId))].map(async id => {
+      try { accs[id] = (await getDoc(doc(db, "secrets", id))).data()?.email || "?"; } catch { accs[id] = "?"; }
+    }));
+    $("sales-log").innerHTML = sales.length ? `<table class="w-full"><tr><th>Fecha</th><th>Tipo</th><th>Cliente</th><th>Servicio</th><th>Cuenta</th><th>Precio</th><th>Pago</th><th>Vence</th></tr>` +
+      sales.map(s => `<tr><td>${esc(fdate(s.createdAt))}</td><td>${s.type === "renovacion" ? "🔄 Renovación" : "🛒 Compra"}</td><td>${esc(s.buyer)}</td><td>${esc(svc(s.service).name)}</td><td>${esc(accs[s.stockId])}</td><td>${money(s.price)}</td><td>${s.pay === "comision" ? "🎁 Comisión" : "Saldo"}</td><td>${esc(fdate(s.expiresAt))}</td></tr>`).join("") + "</table>"
+      : "Aún no hay ventas.";
+    const seen = {}, last = [];
+    sales.forEach(s => { if (!seen[s.stockId]) { seen[s.stockId] = 1; last.push(s); } });
+    last.sort((a, b) => a.expiresAt - b.expiresAt);
+    $("expiring").innerHTML = last.length ? `<table class="w-full"><tr><th>Vence</th><th>Restan</th><th>Cliente</th><th>Servicio</th><th>Cuenta</th></tr>` +
+      last.slice(0, 20).map(s => { const left = Math.ceil((s.expiresAt - Date.now()) / DAY);
+        return `<tr><td>${esc(fdate(s.expiresAt))}</td><td style="color:${left <= 0 ? "#f87171" : left <= 3 ? "var(--go)" : "inherit"}">${left <= 0 ? "VENCIDA" : left + " días"}</td><td>${esc(s.buyer)}</td><td>${esc(svc(s.service).name)}</td><td>${esc(accs[s.stockId])}</td></tr>`; }).join("") + "</table>"
+      : "Sin cuentas vendidas todavía.";
+    const us = (await getDocs(collection(db, "users"))).docs.map(d => d.data()).sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    $("clients").innerHTML = `<table class="w-full"><tr><th>Nombre</th><th>Correo</th><th>Saldo</th><th>Comisión</th></tr>` +
+      us.map(u => `<tr><td>${esc(u.name || "-")}</td><td>${esc(u.email)}</td><td>${money(u.balance)}</td><td>${money(u.bonus || 0)}</td></tr>`).join("") + "</table>";
+  } catch (e) { console.error(e); $("sales-log").textContent = "Error: " + e.message; }
+}
+</script>
+</body>
+</html>
